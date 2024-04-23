@@ -10,30 +10,18 @@
 #' @param LowCov Minimum read depth at site to call either a cSNP or hSNP allele frequency
 #' @param popFreq_threshold Maximum threshold for hSNP to be present in all samples (set as 0 to keep all sites)
 #' @param SNPwindow Take the median of hSNP allele frequencies within this distance on the genome
-#' @param numCores Specify cores for multi-threading, set to 1 for single-core or keep as NA to automatically calculate
 #' @return Two CSV files, one with summary of mixed samples, one with BIC values for mixed samples
 #' @export
 
 MixInfect2<-function(VCFfile, prefix = "output", maskFile = NULL, useFilter = TRUE, 
-                     minQual = 20, LowCov = 10, popFreq_threshold = 0.1, SNPwindow = 100,
-                     numCores = NA){
+                     minQual = 20, LowCov = 10, popFreq_threshold = 0.1, SNPwindow = 100){
   
   if (!require("mclust")){install.packages("mclust")}
   if (!require("stringr")){install.packages("stringr")}
-  if (!require("foreach")) install.packages("foreach")
-  if (!require("doParallel")) install.packages("doParallel")
-  
   library(mclust)
   library(stringr)
-  library(foreach)
-  library(doParallel)
+
   options(stringsAsFactors = F)
-  
-  ## Register cores
-  if (is.na(numCores)){
-    numCores <- detectCores() - 1
-  }
-  registerDoParallel(cores=numCores)
   
   # Read VCF file
   vcf<-read.table(VCFfile)
@@ -80,25 +68,19 @@ MixInfect2<-function(VCFfile, prefix = "output", maskFile = NULL, useFilter = TR
   
   #### Make new matrices of separated GT, DP, and AD fields
 
-  results <- foreach(i = (format+1):ncol(vcf), .packages = 'stringr', .combine = 'cbind') %dopar% {
-    GT_data <- sapply(str_split(vcf[, i], ":"), "[[", GT)
-    newDP <- str_split(vcf[, i], ":")
+  GT_mat<-matrix(ncol = length((format+1):ncol(vcf)),nrow = nrow(vcf))
+  AD_mat<-matrix(ncol = length((format+1):ncol(vcf)),nrow = nrow(vcf))
+  DP_mat<-matrix(ncol = length((format+1):ncol(vcf)),nrow = nrow(vcf))
+  for (i in 1:ncol(GT_mat)) {
+    GT_mat[,i] <- sapply(str_split(vcf[, i+format], ":"), "[[", GT)
+    newDP <- str_split(vcf[, i+format], ":")
     newDP <- lapply(newDP, function(x) if (length(x) < 3) c(x, 0) else x)
-    DP_data <- sapply(newDP, "[[", DP)
-    AD_data <- sapply(str_split(vcf[, i], ":"), "[[", AD)
-    list(GT = GT_data, AD = AD_data, DP = DP_data)
+    DP_mat[,i] <- sapply(newDP, "[[", DP)
+    AD_mat[,i] <- sapply(str_split(vcf[, i+format], ":"), "[[", AD)
   }
-  
-  GT_mat <- matrix(unlist(results[which(row.names(results) == "GT"),]),
-                                  nrow = nrow(vcf), ncol = ncol(vcf) - format, byrow = F)
-  DP_mat <- matrix(unlist(results[which(row.names(results) == "DP"),]),
-                             nrow = nrow(vcf), ncol = ncol(vcf) - format, byrow = F)
-  AD_mat <- matrix(unlist(results[which(row.names(results) == "AD"),]),
-                   nrow = nrow(vcf), ncol = ncol(vcf) - format, byrow = F)
   
   DP_mat[which(DP_mat==".")]<-"0"
   GT_mat[which(as.numeric(DP_mat) < LowCov)]<-"?"
-  rm(results)
   
   ### Create output file
   outfile<-as.data.frame(matrix(NA,nrow=length(names),ncol=7))
@@ -122,11 +104,11 @@ MixInfect2<-function(VCFfile, prefix = "output", maskFile = NULL, useFilter = TR
   }
   
   #### Mask  sites with mixed frequency over popFreq_threshold
-  propMix2 <- foreach(i = 1:nrow(GT_mat), .combine='c') %dopar% {
-    if (sum(GT_mat[i, ] %in% mixed_calls) / ncol(GT_mat) > popFreq_threshold) {
-      return(i) 
-    } 
+  propMix<-numeric()
+  for (i in 1:nrow(GT_mat)){
+    propMix[i]<-length(which(GT_mat[i,] %in% mixed_calls))/ncol(GT_mat)
   }
+  propMix<-which(propMix>popFreq_threshold)
   if (length(propMix) > 0){
     GT_mat<-GT_mat[-propMix,]
     vcf<-vcf[-propMix,]
