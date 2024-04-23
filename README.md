@@ -6,3 +6,4 @@ This tool is an update of a previously published method for detecing mixed infec
 
 A new preprint detailing the performance of this tool is available [here]().
 
+This tool can be run using the MixInfect2.R script. The "MaskedRegions.csv" file can be used with the 'maskFile' parameter to mask regions identified as pe/ppe genes, known antimicrobial resistance-conferring genes, and regions of excess repeats.
