@@ -11,5 +11,10 @@ This page contains two main scripts to first detect mixed infections from (MixIn
 Both scripts are best run in the command line with Rscript as follows:
 
 ```bash
-Rscript MixInfect2.R --VCFfile input.vcf --prefix output --maskFile ...
+Rscript MixInfect2.R --VCFfile input.vcf --prefix output --maskFile MaskedRegions.csv ...
 ```
+
+```bash
+Rscript reconstructConstituents.R --VCFfile input.vcf --outputprefix output --MixInfect2Result output_MixSampleSummary.csv --maskFile MaskedRegions.csv ...
+```
+
