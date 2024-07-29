@@ -6,6 +6,10 @@ This tool is an update of a previously published method for detecing mixed infec
 
 A new preprint detailing the performance of this tool is available [here](https://www.biorxiv.org/content/10.1101/2024.04.26.591283v1).
 
-This tool can be run using the MixInfect2.R script. The "MaskedRegions.csv" file can be used with the 'maskFile' parameter to mask regions identified as pe/ppe genes, known antimicrobial resistance-conferring genes, and regions of excess repeats.
+This page contains two main scripts to first detect mixed infections from (MixInfect.R) and then reconstruct the constituent strains (reconstructConstitutents.R) using two methods - using consensus allele frequencies and matching to the genetically closest non-mixed strain in the dataset. Please see the pre-print above for recommendations on which method provides the most accurately representation of a consensus sequence in mixes.
 
-The MixInfect2_PL.R script can be run on command line using Rscript and allows for multi-threading
+Both scripts are best run in the command line with Rscript as follows:
+
+```bash
+Rscript MixInfect2.R --VCFfile input.vcf --prefix output --maskFile ...
+```
