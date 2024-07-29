@@ -8,13 +8,13 @@ A new preprint detailing the performance of this tool is available [here](https:
 
 This page contains two main scripts to first detect mixed infections from (MixInfect.R) and then reconstruct the constituent strains (reconstructConstitutents.R) using two methods - using consensus allele frequencies and matching to the genetically closest non-mixed strain in the dataset. Please see the pre-print above for recommendations on which method provides the most accurately representation of a consensus sequence in mixes.
 
-Both scripts are best run in the command line with Rscript as follows:
+Both scripts are best run in the command line with Rscript and can be run with default parameters as follows:
 
 ```bash
-Rscript MixInfect2.R --VCFfile input.vcf --prefix output --maskFile MaskedRegions.csv ...
+Rscript MixInfect2.R --VCFfile input.vcf --prefix output --maskFile MaskedRegions.csv 
 ```
 
 ```bash
-Rscript reconstructConstituents.R --VCFfile input.vcf --outputprefix output --MixInfect2Result output_MixSampleSummary.csv --maskFile MaskedRegions.csv ...
+Rscript reconstructConstituents.R --VCFfile input.vcf --outputprefix output --MixInfect2Result output_MixSampleSummary.csv --maskFile MaskedRegions.csv 
 ```
 
