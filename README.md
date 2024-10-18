@@ -14,6 +14,8 @@ The next script (reconstructConstitutents.R) then uses the same VCF file along w
 
 _Note. this tool has only been tested on mixes of two strains and from short-read Illumina data but we are in the process of updating it to incorporate more than two strain mixes and assemblies of long-read sequence data._
 
+<br>
+
 ### Running MixInfect2.R and reconstructConstituents.R
 
 Both scripts are best run in the command line with Rscript and can be run with default parameters as follows:
