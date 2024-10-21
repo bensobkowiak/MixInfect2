@@ -30,9 +30,23 @@ A user-defined prefix for all output files is specified with the ``bash --prefix
 
 A CSV file containing genes to mask in the VCF file that are not considered when estimating mixed samples e.g., AMR-conferring genes or known repeats, is is specified with the ```bash --maskFile``` option. (recommended) 
 
+MixInfect2 can then be run using Rscript in the command line as follows:
+
 ```bash
 Rscript MixInfect2.R --VCFfile input.vcf --prefix output --maskFile MaskedRegions.csv 
 ```
+
+#### reconstructConstituents.R
+
+The same VCF file as used to run MixInfect2 is specified with the ```bash --VCFfile``` option.
+
+A user-defined prefix for all output files is specified with the ``bash --outputprefix``` option.
+
+The main output CSV file from the MixInfect2.R script that classifies samples as mixed or non-mixed (with the suffix "_MixSampleSummary.csv") is specified with the ``bash --MixInfect2Result``` option.
+
+A CSV file containing genes to mask in the VCF file that are not considered when estimating mixed samples e.g., AMR-conferring genes or known repeats, is is specified with the ```bash --maskFile``` option. (recommended) 
+
+reconstructConstituents.R can then be run using Rscript in the command line as follows:
 
 ```bash
 Rscript reconstructConstituents.R --VCFfile input.vcf --outputprefix output --MixInfect2Result output_MixSampleSummary.csv --maskFile MaskedRegions.csv 
