@@ -8,7 +8,7 @@ A new preprint detailing the performance of MixInfect2 is available [here](https
 
 This page contains two main scripts that are executable with Rscript in the command line using VCF files from a variant calling software (e.g., GATK, BCFtools etc.), along with test data to run the tools.
 
-- **MixInfect2.R** estimates the number of strains present in each sample by using a Gaussian Mixture Model to cluster read frequencies at mixed loci identified per sample from the VCF file. 
+- **MixInfect2.R** estimates the number of strains present in each sample by using a Gaussian Mixture Model to cluster read frequencies at mixed loci identified per sample from the VCF file.
 
 - **reconstructConstitutents.R**  uses the same VCF file along with the output file from MixInfect2.R to reconstuct the constituent sequences of samples that were found to contain more than one possible strain. Constituent sequences in mixed samples are predicted using two methods:
     - Assigning strain sequences using consensus read frequencies
@@ -35,6 +35,22 @@ MixInfect2 can then be run using Rscript in the command line as follows:
 ```bash
 Rscript MixInfect2.R --VCFfile input.vcf --prefix output --maskFile MaskedRegions.csv 
 ```
+
+Further options can be specified:
+
+| Option              | Description                                                                                                                                                           |
+|---------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| --VCFfile             | The input VCF file                                                                                                                                                   |
+| --prefix              | An output prefix (default = "output")                                                                                                                                |
+| --maskFile            | A CSV file containing the start and end positions of regions in which to remove sites (e.g., in repeat regions or AMR-conferring genes)                              |
+| --useFilter           | Filter sites using the FILTER column in the VCF (default = TRUE)                                                                                                     |
+| --minQual             | The minimum quality score to include sites (default = 20)                                                                                                            |
+| --LowCov              | The threshold coverage per site to include sites (default = 10)                                                                                                      |
+| --popFreq_threshold   | The threshold to remove mixed sites that are found in a greater proportion of samples in VCF than this value. For single sample VCFs this should be set to 1 (default = 0.1) |
+| --SNPwindow           | Sliding window distance to combine read frequencies of mixed sites in base pairs (default = 100)                                                                     |
+| --n_threads           | Number of threads to use (default = 4)                                                                                                                               |
+
+
 
 #### reconstructConstituents.R
 
