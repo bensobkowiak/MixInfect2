@@ -36,20 +36,19 @@ MixInfect2 can then be run using Rscript in the command line as follows:
 Rscript MixInfect2.R --VCFfile input.vcf --prefix output --maskFile MaskedRegions.csv 
 ```
 
-Further options can be specified:
+The following options can be specified:
 
-| Option              | Description                                                                                                                                                           |
-|---------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| --VCFfile             | The input VCF file                                                                                                                                                   |
-| --prefix              | An output prefix (default = "output")                                                                                                                                |
-| --maskFile            | A CSV file containing the start and end positions of regions in which to remove sites (e.g., in repeat regions or AMR-conferring genes)                              |
-| --useFilter           | Filter sites using the FILTER column in the VCF (default = TRUE)                                                                                                     |
-| --minQual             | The minimum quality score to include sites (default = 20)                                                                                                            |
-| --LowCov              | The threshold coverage per site to include sites (default = 10)                                                                                                      |
-| --popFreq_threshold   | The threshold to remove mixed sites that are found in a greater proportion of samples in VCF than this value. For single sample VCFs this should be set to 1 (default = 0.1) |
-| --SNPwindow           | Sliding window distance to combine read frequencies of mixed sites in base pairs (default = 100)                                                                     |
-| --n_threads           | Number of threads to use (default = 4)                                                                                                                               |
-
+| Option                 | Type       | Default | Description                                                                                                                             |
+|------------------------|------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------|
+| `--VCFfile`            | character  |     | VCF file - must have GT and AD fields                                                                                                   |
+| `--prefix`             | character  | output  | Output file prefix                                                                                                                      |
+| `--maskFile`           | character  | NULL    | CSV file with regions to mask, with start position in column 1 and end position in column 2                                             |
+| `--useFilter`          | logical    | TRUE    | Use the 'FILTER' column in VCF file to filter SNPs                                                                                      |
+| `--minQual`            | numeric    | 20      | Minimum per loci quality                                                                                                                |
+| `--LowCov`             | numeric    | 10      | Minimum read depth at site to call either a cSNP or hSNP allele frequency                                                               |
+| `--popFreq_threshold`  | numeric    | 1       | Remove hSNPs found in greater than this proportion of sequences in VCF (set as 1 for single sample VCF)                                                                                 |
+| `--SNPwindow`          | numeric    | 100     | Take the median of hSNP allele frequencies within this distance on the genome                                                           |
+| `--n_threads`          | numeric    | 4       | Number of threads to use                                                                                                                |
 
 
 #### reconstructConstituents.R
@@ -67,4 +66,20 @@ reconstructConstituents.R can then be run using Rscript in the command line as f
 ```bash
 Rscript reconstructConstituents.R --VCFfile input.vcf --outputprefix output --MixInfect2Result output_MixSampleSummary.csv --maskFile MaskedRegions.csv 
 ```
+
+The following options can be specified:
+
+| Option                       | Type       | Default | Description                                                                                                                           |
+|------------------------------|------------|---------|---------------------------------------------------------------------------------------------------------------------------------------|
+| `-v, --VCFfile`              | character  |         | Input VCF file (same as for MixInfect2)                                                                                                                       |
+| `-o, --prefix`         | character  | output  | Prefix for output files                                                                                                               |
+| `-r, --MixInfect2Result`     | character  |         | output CSV file generated using MixInfect2                                                                                                   |
+| `-f, --maskFile`             | character  | NULL    |CSV file with regions to mask, with start position in column 1 and end position in column 2                |
+| `-q, --minQual`              | integer    | 20      | Minimum per loci quality                                                                                              |
+| `-c, --closestStrain`        | logical    | TRUE    | Reconstruct constituent strains using closest strain method                                                                           |
+| `-x, --maxDistance`          | integer    | 5000    | Maximum distance to closest non-mixed strain (If -c is TRUE)                                                                                         |
+| `-p, --popFreq_threshold`    | numeric    | 1       | Remove hSNPs found in greater than this proportion of sequences in VCF (set as 1 for single sample VCF)                                                              |
+| `-d, --minDepth`             | integer    | 10      | Minimum read depth at site to call either a cSNP or hSNP allele frequency                                                                                             |
+| `-m, --mixProp`              | numeric    | 0.9     | Proportion allele frequency at hSNPs to assign call in non-mixed strains                                                              |
+| `-t, --n_threads`            | integer    | 4       | Number of threads to use                                                                                                              |
 
