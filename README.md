@@ -46,6 +46,7 @@ The following options can be specified:
 | `--useFilter`          | logical    | TRUE    | Use the 'FILTER' column in VCF file to filter SNPs                                                                                      |
 | `--minQual`            | numeric    | 20      | Minimum per loci quality                                                                                                                |
 | `--LowCov`             | numeric    | 10      | Minimum read depth at site to call either a cSNP or hSNP allele frequency                                                               |
+| `--minDepth`             | integer    | 5      | Minimum read depth of minor frequency allele for a mixed call                                                                                             |
 | `--popFreq_threshold`  | numeric    | 1       | Remove hSNPs found in greater than this proportion of sequences in VCF (set as 1 for single sample VCF)                                                                                 |
 | `--SNPwindow`          | numeric    | 100     | Take the median of hSNP allele frequencies within this distance on the genome                                                           |
 | `--n_threads`          | numeric    | 4       | Number of threads to use                                                                                                                |
@@ -79,7 +80,8 @@ The following options can be specified:
 | `-c, --closestStrain`        | logical    | TRUE    | Reconstruct constituent strains using closest strain method (set to FALSE for single sample VCFs)                                                                          |
 | `-x, --maxDistance`          | integer    | 5000    | Maximum distance to closest non-mixed strain (If -c is TRUE)                                                                                         |
 | `-p, --popFreq_threshold`    | numeric    | 1       | Remove hSNPs found in greater than this proportion of sequences in VCF (set as 1 for single sample VCF)                                                              |
-| `-d, --minDepth`             | integer    | 10      | Minimum read depth at site to call either a cSNP or hSNP allele frequency                                                                                             |
+| `--LowCov`             | numeric    | 10      | Minimum read depth at site to call either a cSNP or hSNP allele frequency                                                               |
+| `-d, --minDepth`             | integer    | 5      | Minimum read depth of minor frequency allele for a mixed call                                                                                             |
 | `-m, --mixProp`              | numeric    | 0.9     | Proportion allele frequency at hSNPs to assign call in non-mixed strains                                                              |
 | `-t, --n_threads`            | integer    | 4       | Number of threads to use                                                                                                              |
 
