@@ -466,7 +466,7 @@ if (is.null(opt$VCFfile) | is.null(opt$MixInfect2Result)) {
 
 # Run the function with parsed options
 reconstructConstituents(opt$VCFfile, opt$prefix, opt$MixInfect2Result, opt$maskFile, 
-                        opt$minQual, opt$LowCov, opt$maxDistance, opt$popFreq_threshold, opt$minDepth, 
+                        opt$minQual, opt$LowCov, opt$closestStrain, opt$maxDistance, opt$popFreq_threshold, opt$minDepth, 
                         opt$mixProp, opt$n_threads)
 
 
