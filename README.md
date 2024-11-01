@@ -76,7 +76,7 @@ The following options can be specified:
 | `-r, --MixInfect2Result`     | character  |         | output CSV file generated using MixInfect2                                                                                                   |
 | `-f, --maskFile`             | character  | NULL    |CSV file with regions to mask, with start position in column 1 and end position in column 2                |
 | `-q, --minQual`              | integer    | 20      | Minimum per loci quality                                                                                              |
-| `-c, --closestStrain`        | logical    | TRUE    | Reconstruct constituent strains using closest strain method                                                                           |
+| `-c, --closestStrain`        | logical    | TRUE    | Reconstruct constituent strains using closest strain method (set to FALSE for single sample VCFs)                                                                          |
 | `-x, --maxDistance`          | integer    | 5000    | Maximum distance to closest non-mixed strain (If -c is TRUE)                                                                                         |
 | `-p, --popFreq_threshold`    | numeric    | 1       | Remove hSNPs found in greater than this proportion of sequences in VCF (set as 1 for single sample VCF)                                                              |
 | `-d, --minDepth`             | integer    | 10      | Minimum read depth at site to call either a cSNP or hSNP allele frequency                                                                                             |
