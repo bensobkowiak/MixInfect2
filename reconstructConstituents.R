@@ -74,10 +74,10 @@ require(stringr)
 library(optparse)
 options(stringsAsFactors = F)
 
-reconstructConstituents <- function(VCFfile, outputprefix = "output", MixInfect2Result, 
+reconstructConstituents <- function(VCFfile, prefix = "output", MixInfect2Result, 
                                     maskFile = NULL, minQual = 20, maxDistance = 5000,
-                                    popFreq_threshold = 1, minDepth = 10,
-                                    mixProp = 0.9, n_threads = 1) {
+                                    LowCov = 10, popFreq_threshold = 1, minDepth = 5,
+                                    mixProp = 0.9, closestStrain = T, n_threads = 4) {
   
   amb<-c("N","?","-") # ambiguous sites
   ## Read VCF
@@ -89,6 +89,12 @@ reconstructConstituents <- function(VCFfile, outputprefix = "output", MixInfect2
   head_start<-names[1:9]
   format <- which(names == 'FORMAT')
   samplenames<-names[10:length(names)] # get all sample names in VCF
+  
+  ## Remove indels
+  ind <- lapply(1:nrow(allvcf), function(i) {
+    length(unlist(strsplit(allvcf[i, 4], ""))) > 1 || length(unlist(strsplit(unlist(strsplit(allvcf[i, 5], ","))[1], ""))) > 1
+  })
+  allvcf <- allvcf[which(ind==FALSE), ]
   
   ## Read MixInfect2 result
   mixedSummary<-read.csv(MixInfect2Result)
@@ -127,29 +133,29 @@ reconstructConstituents <- function(VCFfile, outputprefix = "output", MixInfect2
     DP_mat<-cbind(DP_mat,sapply(newDP, "[[", DP))
     AD_mat<-cbind(AD_mat,sapply(str_split(allvcf[,i], ":"), "[[", AD))
   }
-  GT_mat<-GT_mat[,-1]
-  AD_mat<-AD_mat[,-1]
-  DP_mat<-DP_mat[,-1]
+  GT_mat<-GT_mat[,-1, drop=F]
+  AD_mat<-AD_mat[,-1, drop=F]
+  DP_mat<-DP_mat[,-1, drop=F]
   DP_mat[which(DP_mat==".")]<-"0"
-  GT_mat[which(as.numeric(DP_mat)<minDepth)]<-"?"
+  GT_mat[which(as.numeric(DP_mat)<LowCov)]<-"?"
   
   mixed_calls<-c("0/1","0/2","0/3","1/2","1/3","2/3","0|1","0|2","0|3","1|2","1|3","2|3")
   alt_calls<-c("1/1","2/2","3/3","1|1","2|2","3|3")
   
   ## Which sites have mixed reads (not just 0/1 etc.)
-    for (col in 1:ncol(AD_mat)){
-      ADmix<-str_split(AD_mat[,col], ",")
-      for (m in 1:length(ADmix)){
-        AD_site<-as.numeric(unlist(ADmix[m],","))
-        AD_site<-AD_site[!AD_site==0]
-        if (length(AD_site)>1){
-          AD_site<-AD_site[order(AD_site,decreasing = T)]
-          if (AD_site[2]>=minDepth){
-            GT_mat[m,col]<-"0/1"
-          }
+  for (col in 1:ncol(AD_mat)){
+    ADmix<-str_split(AD_mat[,col], ",")
+    for (m in 1:length(ADmix)){
+      AD_site<-as.numeric(unlist(ADmix[m],","))
+      AD_site<-AD_site[!AD_site==0]
+      if (length(AD_site)>1){
+        AD_site<-AD_site[order(AD_site,decreasing = T)]
+        if (AD_site[2]>=minDepth){
+          GT_mat[m,col]<-"0/1"
         }
       }
     }
+  }
   
   #### Ignore  sites with mixed frequency over popFreq_threshold
   propMix<-numeric()
@@ -170,84 +176,94 @@ reconstructConstituents <- function(VCFfile, outputprefix = "output", MixInfect2
   # Final vcfs of mixed and non-mixed strains
   nonmixvcf<-allvcf[,c(1:9,which(colnames(allvcf) %in% nonmixed))]
   mixvcf<-allvcf[,c(1:9,which(colnames(allvcf) %in% mixednames))]
-  rm(allvcf)
-  
-  ## Make consensus sequence of all non-mixed strains
-  finalnuc_nonmix<-as.data.frame(matrix(nrow = nrow(nonmixvcf),ncol=ncol(nonmixvcf)-8))
-  finalnuc_nonmix[,1]<-nonmixvcf$POS
-  colnames(finalnuc_nonmix)<-c("Position",colnames(nonmixvcf[10:ncol(nonmixvcf)]))
   ref<-nonmixvcf[,4]
   alt<-str_split(nonmixvcf[,5], ",")
+  rm(allvcf)
   
-  for (i in 2:ncol(finalnuc_nonmix)){
-    col<-i+8
-    finalseq_maj<-ref
-    geno<-sapply(str_split(nonmixvcf[,col], ":"), "[[", 1)
-    firstref<-which(geno=="1/1" | geno=="1|1")
-    secondref<-which(geno=="2/2" | geno=="2|2")
-    thirdref<-which(geno=="3/3" | geno=="3|3")
-    if (length(firstref)>0){
-      finalseq_maj[firstref]<-sapply(alt[firstref], "[[", 1)
-    }
-    if (length(secondref)>0){
-      finalseq_maj[secondref]<-sapply(alt[secondref], "[[", 2)
-    }
-    if (length(thirdref)>0){
-      finalseq_maj[thirdref]<-sapply(alt[thirdref], "[[", 3)
-    }
+  if (length(nonmixed)>0){
+    ## Make consensus sequence of all non-mixed strains
+    finalnuc_nonmix<-as.data.frame(matrix(nrow = nrow(nonmixvcf),ncol=ncol(nonmixvcf)-8))
+    finalnuc_nonmix[,1]<-nonmixvcf$POS
+    colnames(finalnuc_nonmix)<-c("Position",colnames(nonmixvcf[10:ncol(nonmixvcf)]))
     
-    mix_sites<-c(which(geno=="0/1" | geno=="0|1" | geno=="1/2" | geno=="1|2" |
-                         geno=="1/3" | geno=="1|3" | geno=="2/3" | geno=="2|3"))
     
-    for (j in mix_sites){
-      genomix<-geno[j]
-      nucs<-unlist(str_split(genomix,"|" ))
-      nucs<-nucs[c(2,4)]
-      AD<-sapply(str_split(nonmixvcf[j,col], ":"), "[[", 2)
-      AD<-as.numeric(unlist(str_split(AD,",")))
-      AD_nucs<-c(0,0)
-      if (nucs[1]=="0"){
-        nucs[1]<-ref[j]
-        AD_nucs[1]<-AD[1]
-      } else if (nucs[1]=="1") {
-        nucs[1]<-sapply(alt[j], "[[", 1)
-        AD_nucs[1]<-AD[2]
-      } else if (nucs[1]=="2") {
-        nucs[1]<-sapply(alt[j], "[[", 2)
-        AD_nucs[1]<-AD[3]
+    for (i in 2:ncol(finalnuc_nonmix)){
+      col<-i+8
+      finalseq_maj<-ref
+      geno<-sapply(str_split(nonmixvcf[,col], ":"), "[[", 1)
+      firstref<-which(geno=="1/1" | geno=="1|1")
+      secondref<-which(geno=="2/2" | geno=="2|2")
+      thirdref<-which(geno=="3/3" | geno=="3|3")
+      if (length(firstref)>0){
+        finalseq_maj[firstref]<-sapply(alt[firstref], "[[", 1)
       }
-      if (nucs[2]=="1"){
-        nucs[2]<-sapply(alt[j], "[[", 1)
-        AD_nucs[2]<-AD[2]
-      } else if (nucs[2]=="2") {
-        nucs[2]<-sapply(alt[j], "[[", 2)
-        AD_nucs[2]<-AD[3]
-      } else if (nucs[1]=="3") {
-        nucs[2]<-sapply(alt[j], "[[", 3)
-        AD_nucs[2]<-AD[4]
-      } 
-      if (AD_nucs[1]==AD_nucs[2]){
-        majnuc<-"N"
-      } else if (max(AD_nucs)>=sum(AD)*mixProp) {
-        majnuc<-nucs[which(AD_nucs==max(AD_nucs))]
-      } else {
-        majnuc<-"N"
+      if (length(secondref)>0){
+        finalseq_maj[secondref]<-sapply(alt[secondref], "[[", 2)
       }
-      finalseq_maj[j]<-majnuc
+      if (length(thirdref)>0){
+        finalseq_maj[thirdref]<-sapply(alt[thirdref], "[[", 3)
+      }
+      
+      mix_sites<-c(which(geno=="0/1" | geno=="0|1" | geno=="1/2" | geno=="1|2" |
+                           geno=="1/3" | geno=="1|3" | geno=="2/3" | geno=="2|3"))
+      
+      for (j in mix_sites){
+        genomix<-geno[j]
+        nucs<-unlist(str_split(genomix,"|" ))
+        nucs<-nucs[c(2,4)]
+        AD<-sapply(str_split(nonmixvcf[j,col], ":"), "[[", 2)
+        AD<-as.numeric(unlist(str_split(AD,",")))
+        AD_nucs<-c(0,0)
+        if (nucs[1]=="0"){
+          nucs[1]<-ref[j]
+          AD_nucs[1]<-AD[1]
+        } else if (nucs[1]=="1") {
+          nucs[1]<-sapply(alt[j], "[[", 1)
+          AD_nucs[1]<-AD[2]
+        } else if (nucs[1]=="2") {
+          nucs[1]<-sapply(alt[j], "[[", 2)
+          AD_nucs[1]<-AD[3]
+        }
+        if (nucs[2]=="1"){
+          nucs[2]<-sapply(alt[j], "[[", 1)
+          AD_nucs[2]<-AD[2]
+        } else if (nucs[2]=="2") {
+          nucs[2]<-sapply(alt[j], "[[", 2)
+          AD_nucs[2]<-AD[3]
+        } else if (nucs[1]=="3") {
+          nucs[2]<-sapply(alt[j], "[[", 3)
+          AD_nucs[2]<-AD[4]
+        } 
+        if (AD_nucs[1]==AD_nucs[2]){
+          majnuc<-"N"
+        } else if (max(AD_nucs)>=sum(AD)*mixProp) {
+          majnuc<-nucs[which(AD_nucs==max(AD_nucs))]
+        } else {
+          majnuc<-"N"
+        }
+        finalseq_maj[j]<-majnuc
+      }
+      
+      DP<-sapply(strsplit(nonmixvcf[,col],split = ":"), function(x) x[3])
+      finalseq_maj[which(DP<10)]<-"?"
+      finalnuc_nonmix[,i]<-finalseq_maj ## Final sequences of non-mixed strains
     }
-    
-    DP<-sapply(strsplit(nonmixvcf[,col],split = ":"), function(x) x[3])
-    finalseq_maj[which(DP<10)]<-"?"
-    finalnuc_nonmix[,i]<-finalseq_maj ## Final sequences of non-mixed strains
   }
   
-  ## Get sequences of mixed strains
+  
+  ###### Get sequences of mixed strains
   finalnuc_mix<-as.data.frame(matrix(nrow = nrow(mixvcf),ncol=ncol(mixvcf)-8))
   finalnuc_mix[,1]<-mixvcf$POS
   finalnuc_min<-as.data.frame(mixvcf$POS)
   colnames(finalnuc_mix)<-c("Position",colnames(mixvcf[10:ncol(mixvcf)]))
   names_min<-"Position"
-  finalnucs<-finalnuc_nonmix
+  if (length(nonmixed)>0){
+    finalnucs<-finalnuc_nonmix
+  } else {
+    finalnucs<-data.frame(matrix(ncol = 1, nrow = nrow(mixvcf)))
+    finalnucs[,1]<-mixvcf$POS
+    colnames(finalnucs)[1]<-"Position"
+  }
   
   # Reconstruct major and minor strains 
   for (i in 2:ncol(finalnuc_mix)){
@@ -257,7 +273,7 @@ reconstructConstituents <- function(VCFfile, outputprefix = "output", MixInfect2
     finalseq_min<-ref
     geno<-sapply(str_split(mixvcf[,col], ":"), "[[", 1)
     
-    ## Which sites have mixed reads (not just 0/1 etc. if heteroCall=FALSE)
+    ## Which sites have mixed reads (not just 0/1 etc)
     ADmix<-sapply(str_split(mixvcf[,col], ":"), "[[", 2)
     newmixsites<-numeric()
     for (m in 1:length(ADmix)){
@@ -265,7 +281,7 @@ reconstructConstituents <- function(VCFfile, outputprefix = "output", MixInfect2
       AD_site_new<-AD_site[!AD_site==0]
       if (length(AD_site_new)>1){
         AD_site_new<-AD_site_new[order(AD_site_new,decreasing = T)]
-        if (AD_site_new[2]>=minDepth){
+        if (AD_site_new[2]>=minDepth | geno[m] %in% mixed_calls){
           newmixsites<-c(newmixsites,m)
           geno[m]<-paste0(which(AD_site %in% AD_site_new[1:2])-1,collapse = "/")
         } else {
@@ -294,19 +310,19 @@ reconstructConstituents <- function(VCFfile, outputprefix = "output", MixInfect2
       finalseq_min[thirdref]<-sapply(alt[thirdref], "[[", 3)
     } ## these lists have made a consensus sequence at non-mixed sites for both major and minor strains
     
-    # Mask any sites with read depth < minDepth
+    # Mask any sites with read depth < LowCov
     DP<-sapply(strsplit(mixvcf[,col],split = ":"), function(x) x[3])
-    DP_low<-which(DP < minDepth)
+    DP_low<-which(DP < LowCov)
     finalseq_maj[which(DP<10)]<-"?"
     finalseq_min[which(DP<10)]<-"?"
     
-    ## Distance to non-mixed strains in homozygous sites
-    compare<-cbind(finalseq_maj,finalnuc_nonmix[,2:ncol(finalnuc_nonmix)])
-    compare<-compare[-newmixsites,]
-    nonMixDistances <- sapply(compare[,2:ncol(compare)], 
-                              function(x) hammingDistance(as.character(compare[,1]), as.character(x)))
-    
-    ## Distance to non-mixed strains in heterozygous sites
+    if (length(nonmixed)>0){
+      ## Distance to non-mixed strains in homozygous sites
+      compare<-cbind(finalseq_maj,finalnuc_nonmix[,2:ncol(finalnuc_nonmix)])
+      compare<-compare[-newmixsites,]
+      nonMixDistances <- sapply(compare[,2:ncol(compare)], 
+                                function(x) hammingDistance(as.character(compare[,1]), as.character(x)))
+    }
     nuclist<-list()
     ADlist<-list()
     remove<-numeric()
@@ -354,47 +370,60 @@ reconstructConstituents <- function(VCFfile, outputprefix = "output", MixInfect2
           consensusMajor[newmixsites[j]]<-"N"
           consensusMinor[newmixsites[j]]<-"N"
         } else {
-          consensusMajor[newmixsites[j]]<-nucs[which(AD_nucs==max(AD_nucs))]
-          consensusMinor[newmixsites[j]]<-nucs[which(AD_nucs==min(AD_nucs))]
+          if (AD_nucs[which(AD_nucs==max(AD_nucs))] >=minDepth){
+            consensusMajor[newmixsites[j]]<-nucs[which(AD_nucs==max(AD_nucs))]
+          } else {
+            consensusMajor[newmixsites[j]]<-"N"
+          }
+          if (AD_nucs[which(AD_nucs==min(AD_nucs))] >= minDepth){
+            consensusMinor[newmixsites[j]]<-nucs[which(AD_nucs==min(AD_nucs))]
+          } else {
+            consensusMinor[newmixsites[j]]<-"N"
+          }
         }
       }
       finalnucs<-cbind(finalnucs,data.frame(consensusMajor,consensusMinor))
       colnames(finalnucs)[c((ncol(finalnucs)-1):ncol(finalnucs))]<-
         c(paste0(mixname,"_major_consensus"),paste0(mixname,"_minor_consensus"))
       
-      # Find closest strain(s) in non-mixed strains using all sites 
-      non_mixed_strainDF<-finalnuc_nonmix[newmixsites,2:ncol(finalnuc_nonmix)]
-      closeststrains<-findRelatedStrains(non_mixed_strainDF,nonMixDistances,
-                                         ADlist,nuclist,maxDistance)
       
-      ## Pick closest Strains of higher and lower read frequencies
-      Summary<-closeststrains$Summary
-      ClosestSumHigher<-Summary[which(Summary$PropHigherProps>0.5),]
-      if (nrow(ClosestSumHigher)>0){
-        ClosestSumHigher<-ClosestSumHigher[which(ClosestSumHigher$FullDistance==min(ClosestSumHigher$FullDistance)),]
-        ClosestSumHigher<-ClosestSumHigher[which(ClosestSumHigher$nb.Amb==min(ClosestSumHigher$nb.Amb)),]
-        if (nrow(ClosestSumHigher)>1){
-          closestStrainsMajor<-finalnuc_nonmix[,which(colnames(finalnuc_nonmix) %in% ClosestSumHigher$Name)]
-          consensusMajor <- apply(closestStrainsMajor, 1, makeconsensus)
-        } else {
-          consensusMajor<-as.character(finalnuc_nonmix[,which(colnames(finalnuc_nonmix) %in% ClosestSumHigher$Name)])
+      ## Make closest strain constituents if TRUE
+      if (closestStrain){
+        
+        # Find closest strain(s) in non-mixed strains using all sites 
+        non_mixed_strainDF<-finalnuc_nonmix[newmixsites,2:ncol(finalnuc_nonmix)]
+        closeststrains<-findRelatedStrains(non_mixed_strainDF,nonMixDistances,
+                                           ADlist,nuclist,maxDistance)
+        
+        ## Pick closest Strains of higher and lower read frequencies
+        Summary<-closeststrains$Summary
+        ClosestSumHigher<-Summary[which(Summary$PropHigherProps>0.5),]
+        if (nrow(ClosestSumHigher)>0){
+          ClosestSumHigher<-ClosestSumHigher[which(ClosestSumHigher$FullDistance==min(ClosestSumHigher$FullDistance)),]
+          ClosestSumHigher<-ClosestSumHigher[which(ClosestSumHigher$nb.Amb==min(ClosestSumHigher$nb.Amb)),]
+          if (nrow(ClosestSumHigher)>1){
+            closestStrainsMajor<-finalnuc_nonmix[,which(colnames(finalnuc_nonmix) %in% ClosestSumHigher$Name)]
+            consensusMajor <- apply(closestStrainsMajor, 1, makeconsensus)
+          } else {
+            consensusMajor<-as.character(finalnuc_nonmix[,which(colnames(finalnuc_nonmix) %in% ClosestSumHigher$Name)])
+          }
+          finalnucs<-cbind(finalnucs,consensusMajor)
+          colnames(finalnucs)[ncol(finalnucs)]<-paste0(mixname,"_major_closest")
         }
-        finalnucs<-cbind(finalnucs,consensusMajor)
-        colnames(finalnucs)[ncol(finalnucs)]<-paste0(mixname,"_major_closest")
-      }
-      
-      ClosestSumLower<-Summary[which(Summary$PropHigherProps<0.5),]
-      if (nrow(ClosestSumLower)>0){
-        ClosestSumLower<-ClosestSumLower[which(ClosestSumLower$FullDistance==min(ClosestSumLower$FullDistance)),]
-        ClosestSumLower<-ClosestSumLower[which(ClosestSumLower$nb.Amb==min(ClosestSumLower$nb.Amb)),]
-        if (nrow(ClosestSumLower)>1){
-          closestStrainsMinor<-finalnuc_nonmix[,which(colnames(finalnuc_nonmix) %in% ClosestSumLower$Name)]
-          consensusMinor <- apply(closestStrainsMinor, 1, makeconsensus)
-        } else {
-          consensusMinor<-as.character(finalnuc_nonmix[,which(colnames(finalnuc_nonmix) %in% ClosestSumLower$Name)])
+        
+        ClosestSumLower<-Summary[which(Summary$PropHigherProps<0.5),]
+        if (nrow(ClosestSumLower)>0){
+          ClosestSumLower<-ClosestSumLower[which(ClosestSumLower$FullDistance==min(ClosestSumLower$FullDistance)),]
+          ClosestSumLower<-ClosestSumLower[which(ClosestSumLower$nb.Amb==min(ClosestSumLower$nb.Amb)),]
+          if (nrow(ClosestSumLower)>1){
+            closestStrainsMinor<-finalnuc_nonmix[,which(colnames(finalnuc_nonmix) %in% ClosestSumLower$Name)]
+            consensusMinor <- apply(closestStrainsMinor, 1, makeconsensus)
+          } else {
+            consensusMinor<-as.character(finalnuc_nonmix[,which(colnames(finalnuc_nonmix) %in% ClosestSumLower$Name)])
+          }
+          finalnucs<-cbind(finalnucs,consensusMinor)
+          colnames(finalnucs)[ncol(finalnucs)]<-paste0(mixname,"_minor_closest")
         }
-        finalnucs<-cbind(finalnucs,consensusMinor)
-        colnames(finalnucs)[ncol(finalnucs)]<-paste0(mixname,"_minor_closest")
       }
     } else {
       print(paste0(mixname,"is not a mix"))
@@ -402,24 +431,27 @@ reconstructConstituents <- function(VCFfile, outputprefix = "output", MixInfect2
   }
   
   ## Make FASTA of consensus and closest constituent strains
-  unique_counts <- apply(finalnucs, 1, function(row) length(unique(row[!row %in% amb])))
+  unique_counts <- apply(finalnucs[,2:ncol(finalnucs)], 1, function(row) length(unique(row[!row %in% amb])))
   finalnucs<-finalnucs[which(!unique_counts<2),]
   output_fast<-t(finalnucs[,2:ncol(finalnucs)])
   forfastaref<-as.list(apply(output_fast, 1, paste, collapse=""))
-  write.fasta(forfastaref,colnames(finalnucs)[2:ncol(finalnucs)],paste0(outputprefix,"_constituents.fasta"),open="w")
+  write.fasta(forfastaref,colnames(finalnucs)[2:ncol(finalnucs)],paste0(prefix,"_constituents.fasta"),open="w")
+  write.table(data.frame(SNP=1:nrow(finalnucs),Position=finalnucs$Position),paste0(prefix,"_SNPindex.txt"),quote = F,sep = "\t",row.names = F)
 }
 
 option_list <- list(
-  make_option(c("-v","--VCFfile"), type = "character", help = "Input VCF files", metavar = "character"),
-  make_option(c("-o", "--outputprefix"), type = "character", default = "output", help = "Prefix for output files", metavar = "character"),
-  make_option(c("-r","--MixInfect2Result"), type = "character", help = "CSV file generated using MixInfect2", metavar = "character"),
+  make_option(c("-v","--VCFfile"), type = "character", help = "Input VCF file (same as for MixInfect2)", metavar = "character"),
+  make_option(c("-o", "--prefix"), type = "character", default = "output", help = "Prefix for output files", metavar = "character"),
+  make_option(c("-r","--MixInfect2Result"), type = "character", help = "output CSV file generated using MixInfect2", metavar = "character"),
   make_option(c("-f","--maskFile"), type = "character", default = NULL, help = "CSV file with start and stop coordinates for regions to remove variants from PE/PPE, repeat regions etc. (recommended)", metavar = "character"),
-  make_option(c("-q","--minQual"), type = "integer", default = 20, help = "Minimum variant quality to consider call", metavar = "integer"),
-  make_option(c("-x","--maxDistance"), type = "integer", default = 5000, help = "Maximum distance to closest non-mixed strain", metavar = "integer"),
-  make_option(c("-p","--popFreq_threshold"), type = "numeric", default = 1, help = "Remove hSNPs found in greater than this proportion of sequences in VCF", metavar = "numeric"),
-  make_option(c("-d","--minDepth"), type = "integer", default = 10, help = "Minimum read depth to consider mixed call", metavar = "integer"),
-  make_option(c("-m","--mixProp"), type = "numeric", default = 0.9, help = "Proportion allele frequency at hSNPs to assign call in non-mixed strains", metavar = "numeric"),
-  make_option(c("-t","--n_threads"), type = "integer", default = 1, help = "Number of threads to use", metavar = "integer")
+  make_option(c("-q","--minQual"), type = "integer", default = 20, help = "Minimum per loci quality ", metavar = "integer"),
+  make_option(c("-l","--LowCov"), type = "numeric", default = 10, help = "Minimum read depth at site to call either a cSNP or hSNP allele frequency", metavar = "numeric"),
+  make_option(c("-c","--closestStrain"), type = "logical", default = TRUE, help = "Reconstruct constituent strains using closest strain method", metavar = "logical"),
+  make_option(c("-x","--maxDistance"), type = "integer", default = 5000, help = "Maximum distance to closest non-mixed strain (If -c is TRUE)", metavar = "integer"),
+  make_option(c("-p","--popFreq_threshold"), type = "numeric", default = 1, help = "Remove hSNPs found in greater than this proportion of sequences in VCF (set as 1 for single sample VCF)", metavar = "numeric"),
+  make_option(c("-d","--minDepth"), type = "integer", default = 10, help = "Minimum read depth of minor frequency allele for a mixed call", metavar = "integer"),
+  make_option(c("-m","--mixProp"), type = "numeric", default = 0.9, help = "Minimum read depth at site to call either a cSNP or hSNP allele frequency ", metavar = "numeric"),
+  make_option(c("-t","--n_threads"), type = "integer", default = 4, help = "Number of threads to use", metavar = "integer")
 )
 
 # Parse command-line options
@@ -433,7 +465,9 @@ if (is.null(opt$VCFfile) | is.null(opt$MixInfect2Result)) {
 }
 
 # Run the function with parsed options
-reconstructConstituents(opt$VCFfile, opt$outputprefix, opt$MixInfect2Result, opt$maskFile, 
-                        opt$minQual, opt$maxDistance, opt$popFreq_threshold, opt$minDepth, 
+reconstructConstituents(opt$VCFfile, opt$prefix, opt$MixInfect2Result, opt$maskFile, 
+                        opt$minQual, opt$LowCov, opt$maxDistance, opt$popFreq_threshold, opt$minDepth, 
                         opt$mixProp, opt$n_threads)
+
+
 
