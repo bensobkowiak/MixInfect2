@@ -114,7 +114,7 @@ MixInfect2 <- function(VCFfile, prefix = "output", maskFile = NULL, useFilter = 
   keep <- apply(as.data.frame(GT_mat), 1, function(row) {
     any(row %in% c(mixed_calls, alt_calls))
   })
-  GT_mat <- GT_mat[keep, ]
+  GT_mat <- GT_mat[keep, ,drop == FALSE]
   vcf <- vcf[keep, ]
   
   # Calculate hSNPs, total SNPs, and proportions
