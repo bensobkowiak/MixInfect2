@@ -15,7 +15,8 @@ library(foreach)
 library(doMC)
 
 MixInfect2 <- function(VCFfile, prefix = "output", maskFile = NULL, useFilter = TRUE, 
-                       minQual = 20, LowCov = 10, popFreq_threshold = 1, SNPwindow = 100, n_threads = 4) {
+                       minQual = 20, LowCov = 10, minDepth = 5, 
+                       popFreq_threshold = 0.1, SNPwindow = 100, n_threads = 4) {
   
   # Register the number of threads for parallel processing
   registerDoMC(cores = n_threads)
@@ -31,6 +32,12 @@ MixInfect2 <- function(VCFfile, prefix = "output", maskFile = NULL, useFilter = 
   head_start <- names[1:format]
   names <- names[(format + 1):length(names)]
   rm(header_input)
+  
+  ## Remove indels
+  ind <- lapply(1:nrow(vcf), function(i) {
+    length(unlist(strsplit(vcf[i, 4], ""))) > 1 || length(unlist(strsplit(unlist(strsplit(vcf[i, 5], ","))[1], ""))) > 1
+  })
+  vcf <- vcf[which(ind==FALSE), ]
   
   # Remove filtered variants
   if (useFilter) {
@@ -69,6 +76,7 @@ MixInfect2 <- function(VCFfile, prefix = "output", maskFile = NULL, useFilter = 
     DP_mat[, i] <- sapply(newDP, "[[", DP)
     AD_mat[, i] <- sapply(str_split(vcf[, i + format], ":"), "[[", AD)
   }
+
   DP_mat[which(DP_mat == ".")] <- "0"
   GT_mat[which(as.numeric(DP_mat) < LowCov)] <- "?"
   
@@ -91,12 +99,19 @@ MixInfect2 <- function(VCFfile, prefix = "output", maskFile = NULL, useFilter = 
       AD_site <- AD_site[AD_site != 0]
       if (length(AD_site) > 1) {
         AD_site <- AD_site[order(AD_site, decreasing = TRUE)]
-        if (AD_site[2] >= LowCov) {
+        if (AD_site[2] >= minDepth) {
           GT_mat[m, col] <- "0/1"
         }
       }
     }
   }
+  
+  # Keep loci with an alternative or mixed call
+  keep <- apply(as.data.frame(GT_mat), 1, function(row) {
+    any(row %in% c(mixed_calls, alt_calls))
+  })
+  GT_mat <- GT_mat[keep, , drop=F]
+  vcf <- vcf[keep, ,drop = F]
   
   # Mask sites with mixed frequency over popFreq_threshold
   propMix <- numeric()
@@ -108,13 +123,6 @@ MixInfect2 <- function(VCFfile, prefix = "output", maskFile = NULL, useFilter = 
     GT_mat <- GT_mat[-propMix, ]
     vcf <- vcf[-propMix, ]
   }
-  
-  # Keep loci with an alternative or mixed call
-  keep <- apply(as.data.frame(GT_mat), 1, function(row) {
-    any(row %in% c(mixed_calls, alt_calls))
-  })
-  GT_mat <- GT_mat[keep, ,drop == FALSE]
-  vcf <- vcf[keep, ]
   
   # Calculate hSNPs, total SNPs, and proportions
   mixes <- matrix(0, ncol = ncol(GT_mat), nrow = 4)
@@ -199,7 +207,7 @@ MixInfect2 <- function(VCFfile, prefix = "output", maskFile = NULL, useFilter = 
           }
         }
       }
-      print(paste("Processed sample", i))
+      print(paste("Processed sample", mixnames[i]))
       return(c(i, bic_values, mix_status, no_strains, major_strain_proportion))
     }
     
@@ -227,7 +235,8 @@ option_list <- list(
   make_option(c("--useFilter"), type = "logical", default = TRUE, help = "Use the 'FILTER' column in VCF file to filter SNPs", metavar = "logical"),
   make_option(c("--minQual"), type = "numeric", default = 20, help = "Minimum per loci quality", metavar = "numeric"),
   make_option(c("--LowCov"), type = "numeric", default = 10, help = "Minimum read depth at site to call either a cSNP or hSNP allele frequency", metavar = "numeric"),
-  make_option(c("--popFreq_threshold"), type = "numeric", default = 0.1, help = "Maximum threshold for hSNP to be present in all samples", metavar = "numeric"),
+  make_option(c("--popFreq_threshold"), type = "numeric", default = 1, help = "Maximum threshold for hSNP to be present in all samples", metavar = "numeric"),
+  make_option(c("--minDepth"), type = "integer", default = 5, help = "Minimum read depth of minor frequency allele for a mixed call", metavar = "integer"),
   make_option(c("--SNPwindow"), type = "numeric", default = 100, help = "Take the median of hSNP allele frequencies within this distance on the genome", metavar = "numeric"),
   make_option(c("--n_threads"), type = "numeric", default = 4, help = "Number of threads to use", metavar = "numeric")
 )
@@ -240,4 +249,6 @@ if (is.null(opt$VCFfile)) {
   stop("The VCF file must be specified.", call. = FALSE)
 }
 
-MixInfect2(opt$VCFfile, opt$prefix, opt$maskFile, opt$useFilter, opt$minQual, opt$LowCov, opt$popFreq_threshold, opt$SNPwindow, opt$n_threads)
+MixInfect2(opt$VCFfile, opt$prefix, opt$maskFile, opt$useFilter, 
+           opt$minQual, opt$LowCov, opt$popFreq_threshold, opt$minDepth,
+           opt$SNPwindow, opt$n_threads)
