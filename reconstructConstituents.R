@@ -77,7 +77,7 @@ options(stringsAsFactors = F)
 reconstructConstituents <- function(VCFfile, prefix = "output", MixInfect2Result, 
                                     maskFile = NULL, minQual = 20, maxDistance = 5000,
                                     LowCov = 10, popFreq_threshold = 1, minDepth = 5,
-                                    mixProp = 0.9, closestStrain = T, n_threads = 4) {
+                                    mixProp = 0.9, closestStrain = T) {
   
   amb<-c("N","?","-") # ambiguous sites
   ## Read VCF
@@ -476,7 +476,6 @@ option_list <- list(
   make_option(c("-p","--popFreq_threshold"), type = "numeric", default = 1, help = "Remove hSNPs found in greater than this proportion of sequences in VCF (set as 1 for single sample VCF)", metavar = "numeric"),
   make_option(c("-d","--minDepth"), type = "integer", default = 10, help = "Minimum read depth of minor frequency allele for a mixed call", metavar = "integer"),
   make_option(c("-m","--mixProp"), type = "numeric", default = 0.9, help = "Minimum read depth at site to call either a cSNP or hSNP allele frequency ", metavar = "numeric"),
-  make_option(c("-t","--n_threads"), type = "integer", default = 4, help = "Number of threads to use", metavar = "integer")
 )
 
 # Parse command-line options
@@ -492,5 +491,5 @@ if (is.null(opt$VCFfile) | is.null(opt$MixInfect2Result)) {
 # Run the function with parsed options
 reconstructConstituents(opt$VCFfile, opt$prefix, opt$MixInfect2Result, opt$maskFile, 
                         opt$minQual, opt$LowCov, opt$closestStrain, opt$maxDistance, opt$popFreq_threshold, opt$minDepth, 
-                        opt$mixProp, opt$n_threads)
+                        opt$mixProp)
 
