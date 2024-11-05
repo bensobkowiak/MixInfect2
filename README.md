@@ -65,7 +65,7 @@ A CSV file containing genes to mask in the VCF file that are not considered when
 reconstructConstituents.R can then be run using Rscript in the command line as follows:
 
 ```bash
-Rscript reconstructConstituents.R --VCFfile input.vcf --outputprefix output --MixInfect2Result output_MixSampleSummary.csv --maskFile MaskedRegions.csv 
+Rscript reconstructConstituents.R --VCFfile input.vcf --prefix output --MixInfect2Result output_MixSampleSummary.csv --maskFile MaskedRegions.csv 
 ```
 
 The following options can be specified:
