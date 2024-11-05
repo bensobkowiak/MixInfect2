@@ -20,15 +20,17 @@ _Note. this tool has only been tested on mixes of two strains and from short-rea
 
 <br>
 
-### Running MixInfect2 and reconstruct constituent sequences of mixes
+## Running MixInfect2 and reconstructing constituent sequences of mixed samples
 
-#### MixInfect2.R
+### MixInfect2.R
 
 A VCF file is the main input to run MixInfect2 and is specified with the ```--VCFfile``` option.
 
 A user-defined prefix for all output files is specified with the ```--prefix``` option.
 
 A CSV file containing genes to mask in the VCF file that are not considered when estimating mixed samples e.g., AMR-conferring genes or known repeats, is is specified with the ```--maskFile``` option. (recommended) 
+
+#### Usage
 
 MixInfect2 can then be run using Rscript in the command line as follows:
 
@@ -52,7 +54,16 @@ The following options can be specified:
 | `--n_threads`          | numeric    | 4       | Number of threads to use                                                                                                                |
 
 
-#### reconstructConstituents.R
+#### Output
+
+MixInfect2.R produces two output files
+
+- _prefix_MixSampleSummary.csv_ - A CSV file showing whether each sample is mixed or non-mixed, the number of hSNPs and cSNPs, proportion of hSNPs/cSNPs, the number of estimated strains, and, for mixed samples, the estimated major strain proportion.
+- _prefix_BICvalues.csv_ - For each mixed sample, the corresponding BIC values for the hSNP read frequencies at cluster of size 2, 4 and 6. 
+
+<br>
+
+### reconstructConstituents.R
 
 The same VCF file as used to run MixInfect2 is specified with the ```--VCFfile``` option.
 
@@ -61,6 +72,8 @@ A user-defined prefix for all output files is specified with the ```--outputpref
 The main output CSV file from the MixInfect2.R script that classifies samples as mixed or non-mixed (with the suffix "_MixSampleSummary.csv") is specified with the ```--MixInfect2Result``` option.
 
 A CSV file containing genes to mask in the VCF file that are not considered when estimating mixed samples e.g., AMR-conferring genes or known repeats, is is specified with the ```--maskFile``` option. (recommended) 
+
+#### Usage
 
 reconstructConstituents.R can then be run using Rscript in the command line as follows:
 
@@ -85,3 +98,17 @@ The following options can be specified:
 | `-m, --mixProp`              | numeric    | 0.9     | Proportion allele frequency at hSNPs to assign call in non-mixed strains                                                              |
 | `-t, --n_threads`            | integer    | 4       | Number of threads to use                                                                                                              |
 
+#### Output
+
+reconstructConstituents.R produces two output files and one optional output file:
+
+- _prefix_constituents.fasta_ - A FASTA file containing a concatenated SNP alignment for all non-mixed strains and estimated reconstructed sequences of the mixed samples.
+- _prefix_SNPindex.txt_ - A SNP index of the sites retained in the FASTA file, corresponding to their position in the reference strain as determined in the input VCF file. 
+
+(optional if closestStrain = TRUE):
+
+- _prefix_closestStrainSummary.csv_ - A CSV file containing, for each mixed sample, the names and genetic distance to the closest non-mixed strain in the VCF file for both the major and minor constituent strains.
+
+## Citation
+
+Please cite the following paper if you use MixInfect2 for your analysis, [Sobkowiak et. al. 2024](https://www.biorxiv.org/content/10.1101/2024.04.26.591283v1).
