@@ -69,7 +69,9 @@ MixInfect2 <- function(VCFfile, prefix = "output", maskFile = NULL, useFilter = 
     DP_mat[, i] <- sapply(newDP, "[[", DP)
     AD_mat[, i] <- sapply(str_split(vcf[, i + format], ":"), "[[", AD)
   }
-  
+  GT_mat<-GT_mat[,-1, drop=F]
+  AD_mat<-AD_mat[,-1, drop=F]
+  DP_mat<-DP_mat[,-1, drop=F]
   DP_mat[which(DP_mat == ".")] <- "0"
   GT_mat[which(as.numeric(DP_mat) < LowCov)] <- "?"
   
