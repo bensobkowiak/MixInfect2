@@ -389,44 +389,48 @@ reconstructConstituents <- function(VCFfile, prefix = "output", MixInfect2Result
       
       ## Make closest strain constituents if TRUE
       if (closestStrain){
-        
-        # Find closest strain(s) in non-mixed strains using all sites 
-        non_mixed_strainDF<-finalnuc_nonmix[newmixsites,2:ncol(finalnuc_nonmix)]
-        closeststrains<-findRelatedStrains(non_mixed_strainDF,nonMixDistances,
-                                           ADlist,nuclist,maxDistance)
-        
-        ## Pick closest Strains of higher and lower read frequencies
-        Summary<-closeststrains$Summary
-        ClosestSumHigher<-Summary[which(Summary$PropHigherProps>0.5),]
-        if (nrow(ClosestSumHigher)>0){
-          ClosestSumHigher<-ClosestSumHigher[which(ClosestSumHigher$FullDistance==min(ClosestSumHigher$FullDistance)),]
-          ClosestSumHigher<-ClosestSumHigher[which(ClosestSumHigher$nb.Amb==min(ClosestSumHigher$nb.Amb)),]
-          if (nrow(ClosestSumHigher)>1){
-            closestStrainsMajor<-finalnuc_nonmix[,which(colnames(finalnuc_nonmix) %in% ClosestSumHigher$Name)]
-            consensusMajor <- apply(closestStrainsMajor, 1, makeconsensus)
-          } else {
-            consensusMajor<-as.character(finalnuc_nonmix[,which(colnames(finalnuc_nonmix) %in% ClosestSumHigher$Name)])
+        if (length(nonmixed)==0){
+          print("No non-mixed strains, closest strain method not possible")
+        } else {
+          
+          # Find closest strain(s) in non-mixed strains using all sites 
+          non_mixed_strainDF<-finalnuc_nonmix[newmixsites,2:ncol(finalnuc_nonmix)]
+          closeststrains<-findRelatedStrains(non_mixed_strainDF,nonMixDistances,
+                                             ADlist,nuclist,maxDistance)
+          
+          ## Pick closest Strains of higher and lower read frequencies
+          Summary<-closeststrains$Summary
+          ClosestSumHigher<-Summary[which(Summary$PropHigherProps>0.5),]
+          if (nrow(ClosestSumHigher)>0){
+            ClosestSumHigher<-ClosestSumHigher[which(ClosestSumHigher$FullDistance==min(ClosestSumHigher$FullDistance)),]
+            ClosestSumHigher<-ClosestSumHigher[which(ClosestSumHigher$nb.Amb==min(ClosestSumHigher$nb.Amb)),]
+            if (nrow(ClosestSumHigher)>1){
+              closestStrainsMajor<-finalnuc_nonmix[,which(colnames(finalnuc_nonmix) %in% ClosestSumHigher$Name)]
+              consensusMajor <- apply(closestStrainsMajor, 1, makeconsensus)
+            } else {
+              consensusMajor<-as.character(finalnuc_nonmix[,which(colnames(finalnuc_nonmix) %in% ClosestSumHigher$Name)])
+            }
+            finalnucs<-cbind(finalnucs,consensusMajor)
+            colnames(finalnucs)[ncol(finalnucs)]<-paste0(mixname,"_major_closest")
           }
-          finalnucs<-cbind(finalnucs,consensusMajor)
-          colnames(finalnucs)[ncol(finalnucs)]<-paste0(mixname,"_major_closest")
-        }
-        
-        ClosestSumLower<-Summary[which(Summary$PropHigherProps<0.5),]
-        if (nrow(ClosestSumLower)>0){
-          ClosestSumLower<-ClosestSumLower[which(ClosestSumLower$FullDistance==min(ClosestSumLower$FullDistance)),]
-          ClosestSumLower<-ClosestSumLower[which(ClosestSumLower$nb.Amb==min(ClosestSumLower$nb.Amb)),]
-          if (nrow(ClosestSumLower)>1){
-            closestStrainsMinor<-finalnuc_nonmix[,which(colnames(finalnuc_nonmix) %in% ClosestSumLower$Name)]
-            consensusMinor <- apply(closestStrainsMinor, 1, makeconsensus)
-          } else {
-            consensusMinor<-as.character(finalnuc_nonmix[,which(colnames(finalnuc_nonmix) %in% ClosestSumLower$Name)])
+          
+          ClosestSumLower<-Summary[which(Summary$PropHigherProps<0.5),]
+          if (nrow(ClosestSumLower)>0){
+            ClosestSumLower<-ClosestSumLower[which(ClosestSumLower$FullDistance==min(ClosestSumLower$FullDistance)),]
+            ClosestSumLower<-ClosestSumLower[which(ClosestSumLower$nb.Amb==min(ClosestSumLower$nb.Amb)),]
+            if (nrow(ClosestSumLower)>1){
+              closestStrainsMinor<-finalnuc_nonmix[,which(colnames(finalnuc_nonmix) %in% ClosestSumLower$Name)]
+              consensusMinor <- apply(closestStrainsMinor, 1, makeconsensus)
+            } else {
+              consensusMinor<-as.character(finalnuc_nonmix[,which(colnames(finalnuc_nonmix) %in% ClosestSumLower$Name)])
+            }
+            finalnucs<-cbind(finalnucs,consensusMinor)
+            colnames(finalnucs)[ncol(finalnucs)]<-paste0(mixname,"_minor_closest")
           }
-          finalnucs<-cbind(finalnucs,consensusMinor)
-          colnames(finalnucs)[ncol(finalnucs)]<-paste0(mixname,"_minor_closest")
         }
       }
     } else {
-      print(paste0(mixname,"is not a mix"))
+      print(paste0(mixname,"is not a mix after additional QC steps"))
     }
   }
   
@@ -468,6 +472,4 @@ if (is.null(opt$VCFfile) | is.null(opt$MixInfect2Result)) {
 reconstructConstituents(opt$VCFfile, opt$prefix, opt$MixInfect2Result, opt$maskFile, 
                         opt$minQual, opt$LowCov, opt$closestStrain, opt$maxDistance, opt$popFreq_threshold, opt$minDepth, 
                         opt$mixProp, opt$n_threads)
-
-
 
