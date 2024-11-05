@@ -96,7 +96,7 @@ The following options can be specified:
 | `--LowCov`             | numeric    | 10      | Minimum read depth at site to call either a cSNP or hSNP allele frequency                                                               |
 | `-d, --minDepth`             | integer    | 5      | Minimum read depth of minor frequency allele for a mixed call                                                                                             |
 | `-m, --mixProp`              | numeric    | 0.9     | Proportion allele frequency at hSNPs to assign call in non-mixed strains                                                              |
-| `-t, --n_threads`            | integer    | 4       | Number of threads to use                                                                                                              |
+
 
 #### Output
 
