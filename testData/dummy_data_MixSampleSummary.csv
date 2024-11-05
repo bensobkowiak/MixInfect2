@@ -1,0 +1,9 @@
+"SampleName","Mix.Non-mix","hSNPs","Total.SNPs","Proportion.hSNPs_totalSNPs","No.strains","Major.strain.proportion"
+"Sample1","Mix",798,1030,77.48,2,0.82
+"Sample2","Mix",285,816,34.93,3,0.61
+"Sample3","Mix",144,514,28.02,2,0.93
+"Sample4","Mix",123,834,14.75,2,0.92
+"Sample5","Non-mix",76,305,24.92,1,NA
+"Sample6","Mix",1095,1324,82.7,2,0.66
+"Sample7","Mix",110,519,21.19,3,0.73
+"Sample8","Mix",130,853,15.24,2,0.93
