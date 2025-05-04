@@ -228,27 +228,3 @@ MixInfect2 <- function(VCFfile, prefix = "output", maskFile = NULL, useFilter = 
   }
 }
 
-option_list <- list(
-  make_option(c("--VCFfile"), type = "character", default = NULL, help = "VCF file - must have GT and AD fields", metavar = "character"),
-  make_option(c("--prefix"), type = "character", default = "output", help = "Output file prefix", metavar = "character"),
-  make_option(c("--maskFile"), type = "character", default = NULL, help = "CSV file with regions to mask, with start position in column 1 and end position in column 2", metavar = "character"),
-  make_option(c("--useFilter"), type = "logical", default = TRUE, help = "Use the 'FILTER' column in VCF file to filter SNPs", metavar = "logical"),
-  make_option(c("--minQual"), type = "numeric", default = 20, help = "Minimum per loci quality", metavar = "numeric"),
-  make_option(c("--LowCov"), type = "numeric", default = 10, help = "Minimum read depth at site to call either a cSNP or hSNP allele frequency", metavar = "numeric"),
-  make_option(c("--popFreq_threshold"), type = "numeric", default = 1, help = "Maximum threshold for hSNP to be present in all samples", metavar = "numeric"),
-  make_option(c("--minDepth"), type = "integer", default = 5, help = "Minimum read depth of minor frequency allele for a mixed call", metavar = "integer"),
-  make_option(c("--SNPwindow"), type = "numeric", default = 100, help = "Take the median of hSNP allele frequencies within this distance on the genome", metavar = "numeric"),
-  make_option(c("--n_threads"), type = "numeric", default = 4, help = "Number of threads to use", metavar = "numeric")
-)
-
-opt_parser <- OptionParser(option_list = option_list)
-opt <- parse_args(opt_parser)
-
-if (is.null(opt$VCFfile)) {
-  print_help(opt_parser)
-  stop("The VCF file must be specified.", call. = FALSE)
-}
-
-MixInfect2(opt$VCFfile, opt$prefix, opt$maskFile, opt$useFilter, 
-           opt$minQual, opt$LowCov, opt$popFreq_threshold, opt$minDepth,
-           opt$SNPwindow, opt$n_threads)
