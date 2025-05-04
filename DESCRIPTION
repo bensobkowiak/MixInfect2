@@ -1,7 +1,7 @@
 Package: MixInfect2
 Type: Package
 Title: Estimaing mixed infection from VCF files
-Version: 1.0.1
+Version: 1.1.0
 Author: Ben Sobkowiak
 Maintainer: Ben Sobkowiak <ucbtsob@ucl.ac.uk>
 Description: Clustering of read frequencies at mixed sites using GMM and BIC to assign number of strains and major strain proportion.
