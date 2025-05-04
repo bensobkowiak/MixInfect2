@@ -14,6 +14,8 @@ library(optparse)
 library(foreach)
 library(doMC)
 
+options(stringsAsFactors = FALSE)
+
 MixInfect2 <- function(VCFfile, prefix = "output", maskFile = NULL, useFilter = TRUE, 
                        minQual = 20, LowCov = 10, minDepth = 5, 
                        popFreq_threshold = 1, SNPwindow = 100, n_threads = 4) {
@@ -226,6 +228,7 @@ MixInfect2 <- function(VCFfile, prefix = "output", maskFile = NULL, useFilter = 
   } else {
     print("No mixed infection")
   }
+  return(output)
 }
 
 option_list <- list(
