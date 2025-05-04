@@ -226,5 +226,6 @@ MixInfect2 <- function(VCFfile, prefix = "output", maskFile = NULL, useFilter = 
   } else {
     print("No mixed infection")
   }
+  return(outfile)
 }
 
