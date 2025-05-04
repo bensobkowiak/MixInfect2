@@ -93,7 +93,7 @@ MixInfect2 <- function(VCFfile, prefix = "output", maskFile = NULL, useFilter = 
   
   # Process AD fields to identify mixed calls
   for (col in 1:ncol(AD_mat)) {
-    ADmix <- str_split(AD_mat[, col], ",")
+    ADmix <- str_split(AD_mat[, col])
     for (m in 1:length(ADmix)) {
       AD_site <- as.numeric(unlist(ADmix[m], ","))
       AD_site <- AD_site[AD_site != 0]
