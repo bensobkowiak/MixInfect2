@@ -16,7 +16,7 @@ library(doMC)
 
 MixInfect2 <- function(VCFfile, prefix = "output", maskFile = NULL, useFilter = TRUE, 
                        minQual = 20, LowCov = 10, minDepth = 5, 
-                       popFreq_threshold = 0.1, SNPwindow = 100, n_threads = 4) {
+                       popFreq_threshold = 1, SNPwindow = 100, n_threads = 4) {
   
   # Register the number of threads for parallel processing
   registerDoMC(cores = n_threads)
