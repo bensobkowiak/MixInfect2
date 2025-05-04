@@ -72,9 +72,9 @@ MixInfect2 <- function(VCFfile, prefix = "output", maskFile = NULL, useFilter = 
   for (i in 1:ncol(GT_mat)) {
     GT_mat[, i] <- sapply(str_split(vcf[, i + format], ":"), "[[", GT)
     newDP <- str_split(vcf[, i + format], ":")
-    newDP <- lapply(newDP, function(x) if (length(x) < 3) c(x, 0) else x)
+    newDP <- lapply(newDP, function(x) if (length(x) < 3) c(x, 0,0,0) else x)
     DP_mat[, i] <- sapply(newDP, "[[", DP)
-    AD_mat[, i] <- sapply(str_split(vcf[, i + format], ":"), "[[", AD)
+    AD_mat[, i] <- sapply(newDP, "[[", AD)
   }
 
   DP_mat[which(DP_mat == ".")] <- "0"
