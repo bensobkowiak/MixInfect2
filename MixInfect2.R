@@ -91,7 +91,7 @@ MixInfect2 <- function(VCFfile, prefix = "output", maskFile = NULL, useFilter = 
   # Identify mixed calls
   mixed_calls <- c("0/1", "0/2", "0/3", "1/2", "1/3", "2/3",
                    "0|1", "0|2", "0|3", "1|2", "1|3", "2|3")
-  alt_calls <- c("1/1", "2/2", "3/3", "1|1", "2|2", "3|3")
+  alt_calls <- c("1","2","3","4","5","6","1/1", "2/2", "3/3", "1|1", "2|2", "3|3")
   
   # Process AD fields to identify mixed calls
   for (col in 1:ncol(AD_mat)) {
